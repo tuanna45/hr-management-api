@@ -1,51 +1,38 @@
 package personia.hr.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import personia.hr.service.EmployeeService;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
+import static org.springframework.http.ResponseEntity.ok;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/employees")
 public class EmployeeController {
+    private final EmployeeService employeeService;
+
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> getEmployeesHierarchy() {
+        return ok(employeeService.getEmployeesHierarchy());
+    }
+
+    @GetMapping("/{employeeName}")
+    public ResponseEntity<Map<String, Object>> getSupervisorHierarchy(@PathVariable String employeeName) {
+        return ok(employeeService.getSupervisorHierarchy(employeeName));
+    }
 
     @PostMapping
-    public ResponseEntity<?> createEmployeeHierarchy(@RequestBody Map<String, String> requestEmployees) {
-        Map<String, List<String>> supervisorHierarchy = requestEmployees.entrySet().stream()
-                .collect(groupingBy(Map.Entry::getValue, mapping(Map.Entry::getKey, toList())));
-        List<String> rootSupervisors = supervisorHierarchy.keySet().stream()
-                .filter(supervisor -> Objects.isNull(requestEmployees.get(supervisor)))
-                .collect(toList());
-
-        if (rootSupervisors.size() > 1) {
-            throw new RuntimeException("Multiple roots found");
-        } else if (rootSupervisors.size() == 1) {
-            String topSupervisor = rootSupervisors.get(0);
-            Map<String, Object> finalHierarchy = new HashMap<>();
-            finalHierarchy.put(topSupervisor, getEmployeeMap(topSupervisor, supervisorHierarchy));
-            return ResponseEntity.ok(finalHierarchy);
-        } else {
-            throw new RuntimeException("No top supervisor found");
-        }
+    public ResponseEntity<Map<String, Object>> createEmployeeHierarchy(@RequestBody Map<String, String> requestEmployees) {
+        return ok(employeeService.createEmployeesHierarchy(requestEmployees));
     }
 
-    private Map<String, Object> getEmployeeMap(String supervisor, Map<String, List<String>> supervisorHierarchy) {
-        Map<String, Object> employee = new HashMap<>();
-
-        Optional.ofNullable(supervisorHierarchy.get(supervisor))
-                .ifPresent(employees -> employees.forEach(it -> employee.put(it, getEmployeeMap(it, supervisorHierarchy))));
-
-        return employee;
-    }
 }
