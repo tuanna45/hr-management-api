@@ -2,8 +2,8 @@ package personia.hr.service;
 
 import java.util.Map;
 
-public interface EmployeeService {
-    Map<String, Object> getSupervisorHierarchy(String employeeName);
+public interface EmployeeHierarchyService {
+    Map<String, Object> getSpecifiedEmployeeHierarchy(String employeeName);
 
     Map<String, Object> getEmployeesHierarchy();
 

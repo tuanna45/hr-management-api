@@ -7,13 +7,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.test.context.ActiveProfiles;
-import personia.hr.dto.Employee;
+import personia.hr.domain.Employee;
+import personia.hr.exception.LoopHierarchyException;
 import personia.hr.exception.MultipleRootFoundException;
 import personia.hr.exception.NoEmployeeFoundException;
-import personia.hr.exception.NoRootFoundException;
 import personia.hr.repository.EmployeeRepository;
-import personia.hr.service.impl.EmployeeServiceImpl;
+import personia.hr.service.impl.EmployeeHierarchyServiceImpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,62 +20,61 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(MockitoJUnitRunner.class)
-@ActiveProfiles("test")
 public class EmployeeServiceImplTest {
 
     @Mock
     private EmployeeRepository employeeRepository;
 
     @InjectMocks
-    private EmployeeServiceImpl employeeService;
+    private EmployeeHierarchyServiceImpl employeeService;
 
     @Test(expected = MultipleRootFoundException.class)
     public void shouldThrowMultipleRootFoundException() {
         // Given
-        Map<String, String> employeeTest = new HashMap<>();
-        employeeTest.put("A", "B");
-        employeeTest.put("C", "D");
+        Map<String, String> inputTestEmployees = new HashMap<>();
+        inputTestEmployees.put("A", "B");
+        inputTestEmployees.put("C", "D");
 
         // When
-        employeeService.createEmployeesHierarchy(employeeTest);
+        employeeService.createEmployeesHierarchy(inputTestEmployees);
     }
 
-    @Test(expected = NoRootFoundException.class)
-    public void shouldThrowNoRootFoundException() {
+    @Test(expected = LoopHierarchyException.class)
+    public void shouldThrowLoopHierarchyException() {
         // Given
-        Map<String, String> employeeTest = new HashMap<>();
-        employeeTest.put("A", "B");
-        employeeTest.put("B", "A");
+        Map<String, String> inputTestEmployees = new HashMap<>();
+        inputTestEmployees.put("A", "B");
+        inputTestEmployees.put("B", "A");
 
         // When
-        employeeService.createEmployeesHierarchy(employeeTest);
+        employeeService.createEmployeesHierarchy(inputTestEmployees);
     }
 
     @Test
     public void shouldCreateEmployeesHierarchySuccessfully() {
         // Given
-        Map<String, String> employeeTest = new HashMap<>();
-        employeeTest.put("A", "B");
-        employeeTest.put("B", "C");
+        Map<String, String> inputTestEmployees = new HashMap<>();
+        inputTestEmployees.put("A", "B");
+        inputTestEmployees.put("B", "C");
 
         // When
-        Map<String, Object> employeesHierarchy = employeeService.createEmployeesHierarchy(employeeTest);
+        Map<String, Object> employeesHierarchy = employeeService.createEmployeesHierarchy(inputTestEmployees);
 
         // Then
-        Map<String, Object> secondLevelResult = new HashMap<>();
-        secondLevelResult.put("A", new HashMap<>());
+        Map<String, Object> secondSubHierarchy = new HashMap<>();
+        secondSubHierarchy.put("A", new HashMap<>());
 
-        Map<String, Object> firstLevelResult = new HashMap<>();
-        firstLevelResult.put("B", secondLevelResult);
+        Map<String, Object> firstSubHierarchy = new HashMap<>();
+        firstSubHierarchy.put("B", secondSubHierarchy);
 
-        Map<String, Object> finalExpectedResult = new HashMap<>();
-        finalExpectedResult.put("C", firstLevelResult);
+        Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
+        expectedEmployeesHierarchy.put("C", firstSubHierarchy);
 
-        Assert.assertEquals(employeesHierarchy, finalExpectedResult);
+        Assert.assertEquals(employeesHierarchy, expectedEmployeesHierarchy);
     }
 
     @Test
-    public void shouldGetEmployeesHierarchyCorrectly() {
+    public void shouldGetEmployeesHierarchySuccessfully() {
         // Given
         List<Employee> employees = new ArrayList<>();
         employees.add(new Employee("A", "B"));
@@ -88,20 +86,20 @@ public class EmployeeServiceImplTest {
         Map<String, Object> employeesHierarchy = employeeService.getEmployeesHierarchy();
 
         // Then
-        Map<String, Object> secondLevelResult = new HashMap<>();
-        secondLevelResult.put("A", new HashMap<>());
+        Map<String, Object> secondSubHierarchy = new HashMap<>();
+        secondSubHierarchy.put("A", new HashMap<>());
 
-        Map<String, Object> firstLevelResult = new HashMap<>();
-        firstLevelResult.put("B", secondLevelResult);
+        Map<String, Object> firstSubHierarchy = new HashMap<>();
+        firstSubHierarchy.put("B", secondSubHierarchy);
 
-        Map<String, Object> finalExpectedResult = new HashMap<>();
-        finalExpectedResult.put("C", firstLevelResult);
+        Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
+        expectedEmployeesHierarchy.put("C", firstSubHierarchy);
 
-        Assert.assertEquals(employeesHierarchy, finalExpectedResult);
+        Assert.assertEquals(employeesHierarchy, expectedEmployeesHierarchy);
     }
 
     @Test
-    public void shouldGetSupervisorHierarchyCorrectly() {
+    public void shouldGetSpecifiedEmployeeHierarchyCorrectly() {
         // Given
         List<Employee> employees = new ArrayList<>();
         employees.add(new Employee("A", "B"));
@@ -110,13 +108,13 @@ public class EmployeeServiceImplTest {
         Mockito.when(employeeRepository.findAll()).thenReturn(employees);
 
         // When
-        Map<String, Object> supervisorHierarchy = employeeService.getSupervisorHierarchy("B");
+        Map<String, Object> specifiedEmployeeHierarchy = employeeService.getSpecifiedEmployeeHierarchy("B");
 
         // Then
-        Map<String, Object> finalExpectedResult = new HashMap<>();
-        finalExpectedResult.put("C", new HashMap<>());
+        Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
+        expectedEmployeesHierarchy.put("C", new HashMap<>());
 
-        Assert.assertEquals(supervisorHierarchy, finalExpectedResult);
+        Assert.assertEquals(specifiedEmployeeHierarchy, expectedEmployeesHierarchy);
     }
 
     @Test(expected = NoEmployeeFoundException.class)
@@ -129,7 +127,7 @@ public class EmployeeServiceImplTest {
         Mockito.when(employeeRepository.findAll()).thenReturn(employees);
 
         // When
-        employeeService.getSupervisorHierarchy("D");
+        employeeService.getSpecifiedEmployeeHierarchy("D");
     }
 
 }
