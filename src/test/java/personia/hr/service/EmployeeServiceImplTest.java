@@ -2,17 +2,21 @@ package personia.hr.service;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import personia.hr.domain.Employee;
+import personia.hr.exception.InvalidValueException;
 import personia.hr.exception.LoopHierarchyException;
 import personia.hr.exception.MultipleRootFoundException;
 import personia.hr.exception.NoEmployeeFoundException;
 import personia.hr.repository.EmployeeRepository;
-import personia.hr.service.impl.EmployeeHierarchyServiceImpl;
+import personia.hr.service.impl.EmployeeServiceImpl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,28 +30,56 @@ public class EmployeeServiceImplTest {
     private EmployeeRepository employeeRepository;
 
     @InjectMocks
-    private EmployeeHierarchyServiceImpl employeeService;
+    private EmployeeServiceImpl employeeService;
+
+    @Test
+    public void shouldGetCorrectExceptionMessageWhenCreateEmployeesWithInputEmpty() {
+        // Given
+        Map<String, String> inputTestEmployees = new HashMap<>();
+
+        // When
+        InvalidValueException exception  = Assertions.assertThrows(InvalidValueException.class,
+                () -> employeeService.createEmployees(inputTestEmployees));
+
+        // Then
+        Assert.assertEquals(exception.getMessage(), new InvalidValueException().getMessage());
+    }
+
+    @Test
+    public void shouldGetCorrectExceptionMessageWhenCreateEmployeesWithInvalidEmployeeValue() {
+        // Given
+        Map<String, String> inputTestEmployees = new HashMap<>();
+        inputTestEmployees.put("A", "B");
+        inputTestEmployees.put("C", null);
+
+        // When
+        InvalidValueException exception  = Assertions.assertThrows(InvalidValueException.class,
+                () -> employeeService.createEmployees(inputTestEmployees));
+
+        // Then
+        Assert.assertEquals(exception.getMessage(), new InvalidValueException("C").getMessage());
+    }
 
     @Test(expected = MultipleRootFoundException.class)
-    public void shouldThrowMultipleRootFoundException() {
+    public void shouldThrowMultipleRootFoundExceptionWhenCreateEmployees() {
         // Given
         Map<String, String> inputTestEmployees = new HashMap<>();
         inputTestEmployees.put("A", "B");
         inputTestEmployees.put("C", "D");
 
         // When
-        employeeService.createEmployeesHierarchy(inputTestEmployees);
+        employeeService.createEmployees(inputTestEmployees);
     }
 
     @Test(expected = LoopHierarchyException.class)
-    public void shouldThrowLoopHierarchyException() {
+    public void shouldThrowLoopHierarchyExceptionWhenCreateEmployees() {
         // Given
         Map<String, String> inputTestEmployees = new HashMap<>();
         inputTestEmployees.put("A", "B");
         inputTestEmployees.put("B", "A");
 
         // When
-        employeeService.createEmployeesHierarchy(inputTestEmployees);
+        employeeService.createEmployees(inputTestEmployees);
     }
 
     @Test
@@ -58,7 +90,7 @@ public class EmployeeServiceImplTest {
         inputTestEmployees.put("B", "C");
 
         // When
-        Map<String, Object> employeesHierarchy = employeeService.createEmployeesHierarchy(inputTestEmployees);
+        Map<String, Object> employeesHierarchy = employeeService.createEmployees(inputTestEmployees);
 
         // Then
         Map<String, Object> secondSubHierarchy = new HashMap<>();
@@ -83,7 +115,7 @@ public class EmployeeServiceImplTest {
         Mockito.when(employeeRepository.findAll()).thenReturn(employees);
 
         // When
-        Map<String, Object> employeesHierarchy = employeeService.getEmployeesHierarchy();
+        Map<String, Object> employeesHierarchy = employeeService.getEmployees();
 
         // Then
         Map<String, Object> secondSubHierarchy = new HashMap<>();
@@ -104,15 +136,19 @@ public class EmployeeServiceImplTest {
         List<Employee> employees = new ArrayList<>();
         employees.add(new Employee("A", "B"));
         employees.add(new Employee("B", "C"));
+        employees.add(new Employee("C", "D"));
 
         Mockito.when(employeeRepository.findAll()).thenReturn(employees);
 
         // When
-        Map<String, Object> specifiedEmployeeHierarchy = employeeService.getSpecifiedEmployeeHierarchy("B");
+        Map<String, Object> specifiedEmployeeHierarchy = employeeService.getSpecifiedEmployee("A");
 
         // Then
+        Map<String, Object> firstSubHierarchy = new HashMap<>();
+        firstSubHierarchy.put("C", new HashMap<>());
+
         Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
-        expectedEmployeesHierarchy.put("C", new HashMap<>());
+        expectedEmployeesHierarchy.put("B", firstSubHierarchy);
 
         Assert.assertEquals(specifiedEmployeeHierarchy, expectedEmployeesHierarchy);
     }
@@ -127,7 +163,7 @@ public class EmployeeServiceImplTest {
         Mockito.when(employeeRepository.findAll()).thenReturn(employees);
 
         // When
-        employeeService.getSpecifiedEmployeeHierarchy("D");
+        employeeService.getSpecifiedEmployee("D");
     }
 
 }

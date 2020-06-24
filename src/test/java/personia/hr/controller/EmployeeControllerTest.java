@@ -3,31 +3,26 @@ package personia.hr.controller;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import personia.hr.domain.Employee;
-import personia.hr.service.EmployeeHierarchyService;
+import personia.hr.service.EmployeeService;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.springframework.http.HttpStatus.OK;
 
 @RunWith(MockitoJUnitRunner.class)
-public class EmployeeHierarchyControllerTest {
+public class EmployeeControllerTest {
 
     @Mock
-    private EmployeeHierarchyService employeeHierarchyService;
+    private EmployeeService employeeService;
 
     @InjectMocks
-    private EmployeeHierarchyController employeeHierarchyController;
+    private EmployeeController employeeController;
 
     @Test
     public void shouldCreateEmployeesHierarchySuccessfully() {
@@ -45,11 +40,11 @@ public class EmployeeHierarchyControllerTest {
         Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
         expectedEmployeesHierarchy.put("C", firstSubHierarchy);
 
-        Mockito.when(employeeHierarchyService.createEmployeesHierarchy(inputTestEmployees))
+        Mockito.when(employeeService.createEmployees(inputTestEmployees))
                 .thenReturn(expectedEmployeesHierarchy);
 
         // When
-        ResponseEntity<Map<String, Object>> employeesHierarchyResponse = employeeHierarchyController.createEmployeesHierarchy(inputTestEmployees);
+        ResponseEntity<Map<String, Object>> employeesHierarchyResponse = employeeController.createEmployees(inputTestEmployees);
 
         // Then
         Assert.assertEquals(employeesHierarchyResponse.getStatusCode(), OK);
@@ -68,10 +63,10 @@ public class EmployeeHierarchyControllerTest {
         Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
         expectedEmployeesHierarchy.put("C", firstSubHierarchy);
 
-        Mockito.when(employeeHierarchyService.getEmployeesHierarchy()).thenReturn(expectedEmployeesHierarchy);
+        Mockito.when(employeeService.getEmployees()).thenReturn(expectedEmployeesHierarchy);
 
         // When
-        ResponseEntity<Map<String, Object>> employeesHierarchyResponse = employeeHierarchyController.getEmployeesHierarchy();
+        ResponseEntity<Map<String, Object>> employeesHierarchyResponse = employeeController.getEmployees();
 
         // Then
         Assert.assertEquals(employeesHierarchyResponse.getStatusCode(), OK);
@@ -84,11 +79,11 @@ public class EmployeeHierarchyControllerTest {
         Map<String, Object> expectedEmployeesHierarchy = new HashMap<>();
         expectedEmployeesHierarchy.put("C", new HashMap<>());
 
-        Mockito.when(employeeHierarchyService.getSpecifiedEmployeeHierarchy("B"))
+        Mockito.when(employeeService.getSpecifiedEmployee("B"))
                 .thenReturn(expectedEmployeesHierarchy);
 
         // When
-        ResponseEntity<Map<String, Object>> specifiedEmployeeHierarchyResponse = employeeHierarchyController.getSpecifiedEmployeeHierarchy("B");
+        ResponseEntity<Map<String, Object>> specifiedEmployeeHierarchyResponse = employeeController.getSpecifiedEmployee("B");
 
         // Then
         Assert.assertEquals(specifiedEmployeeHierarchyResponse.getStatusCode(), OK);

@@ -11,7 +11,7 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 @ControllerAdvice
 public class ExceptionHandlerAdvisor {
 
-    @ExceptionHandler({MultipleRootFoundException.class, LoopHierarchyException.class})
+    @ExceptionHandler({MultipleRootFoundException.class, LoopHierarchyException.class, InvalidValueException.class})
     public ResponseEntity<?> handleEmployeeInputException(Exception ex) {
         log.error(ex.getMessage());
         return ResponseEntity.badRequest().body(ex.getMessage());

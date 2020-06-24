@@ -2,12 +2,15 @@ package personia.hr.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import personia.hr.domain.Employee;
+import personia.hr.exception.InvalidValueException;
 import personia.hr.exception.LoopHierarchyException;
 import personia.hr.exception.MultipleRootFoundException;
 import personia.hr.exception.NoEmployeeFoundException;
 import personia.hr.repository.EmployeeRepository;
-import personia.hr.service.EmployeeHierarchyService;
+import personia.hr.service.EmployeeService;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,14 +19,14 @@ import java.util.Optional;
 
 import static java.lang.Boolean.FALSE;
 import static java.util.Objects.isNull;
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.mapping;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 
 @RequiredArgsConstructor
 @Service
-public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
+public class EmployeeServiceImpl implements EmployeeService {
+    private static final int MAX_SUPERVISOR_LEVEL = 2;
+    private static final int FIRST_SUPERVISOR_LEVEL = 1;
+
     private final EmployeeRepository employeeRepository;
 
     /**
@@ -31,16 +34,19 @@ public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
      *
      * @param inputEmployees: Json input describe relationship between employee and supervisor
      * @return Employees hierarchy
+     * @throws InvalidValueException:      Invalid input value found
      * @throws MultipleRootFoundException: Multiple top supervisor found
      * @throws LoopHierarchyException:     Input hierarchy contain loops
      */
     @Override
-    public Map<String, Object> createEmployeesHierarchy(Map<String, String> inputEmployees) {
+    public Map<String, Object> createEmployees(Map<String, String> inputEmployees) {
+        validateInputEmployees(inputEmployees);
+
         Map<String, List<String>> supervisors = getSupervisors(inputEmployees);
         List<String> topSupervisors = getTopSupervisors(inputEmployees, supervisors);
 
         if (hasMultipleRoots(topSupervisors)) {
-            throw new MultipleRootFoundException();
+            throw new MultipleRootFoundException(topSupervisors);
         }
 
         if (hasLoopHierarchy(topSupervisors)) {
@@ -52,6 +58,21 @@ public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
         return buildHighestSupervisorHierarchy(supervisors, topSupervisors);
     }
 
+    private void validateInputEmployees(Map<String, String> inputEmployees) {
+        // Check input is empty or not
+        if (CollectionUtils.isEmpty(inputEmployees)) {
+            throw new InvalidValueException();
+        }
+
+        // Validate value of each employee
+        inputEmployees.entrySet().stream()
+                .filter(it -> StringUtils.isEmpty(it.getValue()) || it.getKey().equalsIgnoreCase(it.getValue()))
+                .findFirst()
+                .ifPresent(it -> {
+                    throw new InvalidValueException(it.getKey());
+                });
+    }
+
     // Get a supervisors's structure contains key is supervisor and value is supervisor's employees
     private Map<String, List<String>> getSupervisors(Map<String, String> employees) {
         return employees.entrySet().stream()
@@ -60,8 +81,8 @@ public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
 
     // Get top supervisor - Top supervisor is the person who is not an employee of another supervisor
     private List<String> getTopSupervisors(Map<String, String> inputEmployees,
-                                           Map<String, List<String>> supervisorHierarchy) {
-        return supervisorHierarchy.keySet().stream()
+                                           Map<String, List<String>> supervisors) {
+        return supervisors.keySet().stream()
                 .filter(supervisor -> isNull(inputEmployees.get(supervisor)))
                 .collect(toList());
     }
@@ -112,27 +133,31 @@ public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
      * @throws NoEmployeeFoundException: No employee found in DB
      */
     @Override
-    public Map<String, Object> getSpecifiedEmployeeHierarchy(String employeeName) {
-        Map<String, String> employeeMap = getEmployees();
+    public Map<String, Object> getSpecifiedEmployee(String employeeName) {
+        Map<String, String> employeeMap = getEmployeesFromDB();
 
         if (employeeMap.containsKey(employeeName) == FALSE) {
             throw new NoEmployeeFoundException();
         }
 
-        return buildSupervisorHierarchyByEmployee(employeeName, employeeMap);
+        return buildSupervisorHierarchyByEmployee(employeeName, employeeMap, FIRST_SUPERVISOR_LEVEL);
     }
 
-    // Create map with key is employee and value is supervisor
-    private Map<String, String> getEmployees() {
+    // Get employees from DB and create map with key is employee and value is supervisor
+    private Map<String, String> getEmployeesFromDB() {
         List<Employee> employees = employeeRepository.findAll();
         return employees.stream().collect(toMap(Employee::getEmployeeName, Employee::getSupervisorName));
     }
 
     // Create hierarchy of employee's supervisor
-    private Map<String, Object> buildSupervisorHierarchyByEmployee(String employeeName, Map<String, String> employeeMap) {
+    private Map<String, Object> buildSupervisorHierarchyByEmployee(String employeeName, Map<String, String> employeeMap, int count) {
         Map<String, Object> employee = new HashMap<>();
-        Optional.ofNullable(employeeMap.get(employeeName))
-                .ifPresent(supervisor -> employee.put(supervisor, buildSupervisorHierarchyByEmployee(supervisor, employeeMap)));
+
+        if (count <= MAX_SUPERVISOR_LEVEL) {
+            Optional.ofNullable(employeeMap.get(employeeName))
+                    .ifPresent(supervisor -> employee.put(supervisor, buildSupervisorHierarchyByEmployee(supervisor, employeeMap, count + 1)));
+        }
+
         return employee;
     }
 
@@ -142,8 +167,8 @@ public class EmployeeHierarchyServiceImpl implements EmployeeHierarchyService {
      * @return Hierarchy of all employees
      */
     @Override
-    public Map<String, Object> getEmployeesHierarchy() {
-        Map<String, String> employeeMap = getEmployees();
+    public Map<String, Object> getEmployees() {
+        Map<String, String> employeeMap = getEmployeesFromDB();
         Map<String, List<String>> supervisors = getSupervisors(employeeMap);
         List<String> topSupervisors = getTopSupervisors(employeeMap, supervisors);
 

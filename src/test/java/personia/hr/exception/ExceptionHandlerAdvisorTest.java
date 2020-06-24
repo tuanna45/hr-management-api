@@ -8,6 +8,9 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Arrays;
+import java.util.List;
+
 @RunWith(MockitoJUnitRunner.class)
 public class ExceptionHandlerAdvisorTest {
 
@@ -17,7 +20,8 @@ public class ExceptionHandlerAdvisorTest {
     @Test
     public void shouldHandleEmployeeInputExceptionCorrectly() {
         // Given
-        MultipleRootFoundException multipleRootFoundException = new MultipleRootFoundException();
+        List<String> inputs = Arrays.asList("A", "B");
+        MultipleRootFoundException multipleRootFoundException = new MultipleRootFoundException(inputs);
 
         // When
         ResponseEntity<?> responseEntity = exceptionHandlerAdvisor.handleEmployeeInputException(multipleRootFoundException);
