@@ -50,7 +50,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
 
         if (hasLoopHierarchy(topSupervisors)) {
-            throw new LoopHierarchyException();
+            throw new LoopHierarchyException(supervisors.keySet());
         }
 
         saveEmployeesInDB(inputEmployees);
