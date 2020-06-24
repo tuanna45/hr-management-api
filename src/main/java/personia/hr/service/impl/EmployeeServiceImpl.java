@@ -130,7 +130,7 @@ public class EmployeeServiceImpl implements EmployeeService {
      *
      * @param employeeName: Employee name
      * @return Employee hierarchy of specified employee
-     * @throws NoEmployeeFoundException: No employee found in DB
+     * @throws NoEmployeeFoundException: No employee found
      */
     @Override
     public Map<String, Object> getSpecifiedEmployee(String employeeName) {
@@ -165,10 +165,16 @@ public class EmployeeServiceImpl implements EmployeeService {
      * Get employees hierarchy
      *
      * @return Hierarchy of all employees
+     * @throws NoEmployeeFoundException: No data available
      */
     @Override
     public Map<String, Object> getEmployees() {
         Map<String, String> employeeMap = getEmployeesFromDB();
+        // Check data from DB empty or not
+        if (CollectionUtils.isEmpty(employeeMap)) {
+            throw new NoEmployeeFoundException("No data available");
+        }
+
         Map<String, List<String>> supervisors = getSupervisors(employeeMap);
         List<String> topSupervisors = getTopSupervisors(employeeMap, supervisors);
 

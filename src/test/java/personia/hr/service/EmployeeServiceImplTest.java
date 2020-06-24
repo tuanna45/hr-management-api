@@ -105,6 +105,15 @@ public class EmployeeServiceImplTest {
         Assert.assertEquals(employeesHierarchy, expectedEmployeesHierarchy);
     }
 
+    @Test(expected = NoEmployeeFoundException.class)
+    public void shouldThrowNoEmployeeFoundExceptionWhenGetEmployees() {
+        // Given
+        Mockito.when(employeeRepository.findAll()).thenReturn(new ArrayList<>());
+
+        // When
+        employeeService.getEmployees();
+    }
+
     @Test
     public void shouldGetEmployeesHierarchySuccessfully() {
         // Given
@@ -154,7 +163,7 @@ public class EmployeeServiceImplTest {
     }
 
     @Test(expected = NoEmployeeFoundException.class)
-    public void shouldThrowNoEmployeeFoundException() {
+    public void shouldThrowNoEmployeeFoundExceptionWhenGetSpecifiedEmployee() {
         // Given
         List<Employee> employees = new ArrayList<>();
         employees.add(new Employee("A", "B"));
